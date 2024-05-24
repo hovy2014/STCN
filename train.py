@@ -123,14 +123,15 @@ Not effective for stage 0 training
 skip_values = [10, 15, 20, 25, 5]
 
 if para['stage'] == 0:
+    tps_torch_flag = para['tps_torch']
     static_root = path.expanduser(para['static_root'])
-    fss_dataset = StaticTransformDataset(path.join(static_root, 'fss'), method=0)
-    duts_tr_dataset = StaticTransformDataset(path.join(static_root, 'DUTS-TR'), method=1)
-    duts_te_dataset = StaticTransformDataset(path.join(static_root, 'DUTS-TE'), method=1)
-    ecssd_dataset = StaticTransformDataset(path.join(static_root, 'ecssd'), method=1)
+    fss_dataset = StaticTransformDataset(path.join(static_root, 'fss'), method=0, tps_torch_flag=tps_torch_flag)
+    duts_tr_dataset = StaticTransformDataset(path.join(static_root, 'DUTS-TR'), method=1, tps_torch_flag=tps_torch_flag)
+    duts_te_dataset = StaticTransformDataset(path.join(static_root, 'DUTS-TE'), method=1, tps_torch_flag=tps_torch_flag)
+    ecssd_dataset = StaticTransformDataset(path.join(static_root, 'ecssd'), method=1, tps_torch_flag=tps_torch_flag)
 
-    big_dataset = StaticTransformDataset(path.join(static_root, 'BIG_small'), method=1)
-    hrsod_dataset = StaticTransformDataset(path.join(static_root, 'HRSOD_small'), method=1)
+    big_dataset = StaticTransformDataset(path.join(static_root, 'BIG_small'), method=1, tps_torch_flag=tps_torch_flag)
+    hrsod_dataset = StaticTransformDataset(path.join(static_root, 'HRSOD_small'), method=1, tps_torch_flag=tps_torch_flag)
 
     # BIG and HRSOD have higher quality, use them more
     train_dataset = ConcatDataset([fss_dataset, duts_tr_dataset, duts_te_dataset, ecssd_dataset]

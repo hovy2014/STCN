@@ -21,9 +21,10 @@ class StaticTransformDataset(Dataset):
     Method 0 - FSS style (class/1.jpg class/1.png)
     Method 1 - Others style (XXX.jpg XXX.png)
     """
-    def __init__(self, root, method=0):
+    def __init__(self, root, method=0, tps_torch_flag=False):
         self.root = root
         self.method = method
+        self.tps_torch_flag = tps_torch_flag
 
         if method == 0:
             # Get images
@@ -113,7 +114,7 @@ class StaticTransformDataset(Dataset):
             # Use TPS only some of the times
             # Not because TPS is bad -- just that it is too slow and I need to speed up data loading
             if np.random.rand() < 0.33:
-                this_im, this_gt = random_tps_warp(this_im, this_gt, scale=0.02)
+                this_im, this_gt = random_tps_warp(this_im, this_gt, scale=0.02, tensor_flag=self.tps_torch_flag)
 
             this_im = self.final_im_transform(this_im)
             this_gt = self.final_gt_transform(this_gt)
