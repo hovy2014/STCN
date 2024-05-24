@@ -35,6 +35,24 @@ class Decoder(nn.Module):
         x = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
         return x
 
+class Decoder_MBO(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.compress = ResBlock(1024, 256)
+        self.up_16_8 = UpsampleBlock(128, 256, 256) # 1/16 -> 1/8
+        self.up_8_4 = UpsampleBlock(48, 256, 256) # 1/8 -> 1/4
+
+        self.pred = nn.Conv2d(256, 1, kernel_size=(3,3), padding=(1,1), stride=1)
+
+    def forward(self, f16, f8, f4):
+        x = self.compress(f16)
+        x = self.up_16_8(f8, x)
+        x = self.up_8_4(f4, x)
+
+        x = self.pred(F.relu(x))
+        
+        x = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
+        return x
 
 class MemoryReader(nn.Module):
     def __init__(self):
@@ -72,24 +90,38 @@ class MemoryReader(nn.Module):
 
 
 class STCN(nn.Module):
-    def __init__(self, single_object):
+    def __init__(self, single_object, backbone='res50res18'):
         super().__init__()
         self.single_object = single_object
+        
+        if backbone == 'res50res18':
+            f16_channels = 1024
 
-        self.key_encoder = KeyEncoder()
-        if single_object:
-            self.value_encoder = ValueEncoderSO() 
+            self.key_encoder = KeyEncoder()
+            if single_object:
+                self.value_encoder = ValueEncoderSO()
+            else:
+                self.value_encoder = ValueEncoder()
+            self.decoder = Decoder()
+        elif backbone == 's0s0':
+            f16_channels = 256
+
+            self.key_encoder = KeyEncoder_MBO()
+            if single_object:
+                self.value_encoder = ValueEncoderSO_MBO()
+            else:
+                self.value_encoder = ValueEncoder_MBO()
+            self.decoder = Decoder_MBO()
         else:
-            self.value_encoder = ValueEncoder() 
+            raise NotImplementedError
 
         # Projection from f16 feature space to key space
-        self.key_proj = KeyProjection(1024, keydim=64)
+        self.key_proj = KeyProjection(f16_channels, keydim=64)
 
         # Compress f16 a bit to use in decoding later on
-        self.key_comp = nn.Conv2d(1024, 512, kernel_size=3, padding=1)
+        self.key_comp = nn.Conv2d(f16_channels, 512, kernel_size=3, padding=1)
 
         self.memory = MemoryReader()
-        self.decoder = Decoder()
 
     def aggregate(self, prob):
         new_prob = torch.cat([

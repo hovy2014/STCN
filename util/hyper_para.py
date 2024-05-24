@@ -11,7 +11,9 @@ class HyperParameters():
         # Enable torch.backends.cudnn.benchmark -- Faster in some cases, test in your own environment
         parser.add_argument('--benchmark', action='store_true')
         parser.add_argument('--no_amp', action='store_true')
+        
         parser.add_argument('--tps_torch', action='store_true')
+        parser.add_argument('--backbone', help='res50res18|s0s0', default='res50res18')
 
         # Data parameters
         parser.add_argument('--static_root', help='Static training data root', default='../static')

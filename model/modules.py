@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 
-from model import mod_resnet
+from model import mod_resnet, mod_mobileone
 from model import cbam
 
 
@@ -147,6 +147,77 @@ class KeyEncoder(nn.Module):
 
         return f16, f8, f4
 
+
+#! ###### mobileone key value encoder ########
+class ValueEncoderSO_MBO(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        mbonet = mod_mobileone.mobileone(extra_chan=1)
+        self.stage0 = mbonet.stage0
+        self.stage1 = mbonet.stage1
+        self.stage2 = mbonet.stage2
+        self.stage3 = mbonet.stage3
+
+        self.fuser = FeatureFusionBlock(256 + 256, 512)
+
+    def forward(self, image, key_f16, mask):
+        # key_f16 is the feature from the key encoder
+
+        f = torch.cat([image, mask], 1)
+
+        x = self.stage0(f)
+        x = self.stage1(x)   # 1/4, 48
+        x = self.stage2(x)   # 1/8, 128
+        x = self.stage3(x)   # 1/16, 256
+
+        x = self.fuser(x, key_f16)
+
+        return x
+
+class ValueEncoder_MBO(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        mbonet = mod_mobileone.mobileone(extra_chan=2)
+        self.stage0 = mbonet.stage0
+        self.stage1 = mbonet.stage1
+        self.stage2 = mbonet.stage2
+        self.stage3 = mbonet.stage3
+
+        self.fuser = FeatureFusionBlock(256 + 256, 512)
+
+    def forward(self, image, key_f16, mask, other_masks):
+        # key_f16 is the feature from the key encoder
+
+        f = torch.cat([image, mask, other_masks], 1)
+
+        x = self.stage0(f)
+        x = self.stage1(x)   # 1/4, 48
+        x = self.stage2(x)   # 1/8, 128
+        x = self.stage3(x)   # 1/16, 256
+
+        x = self.fuser(x, key_f16)
+
+        return x
+ 
+class KeyEncoder_MBO(nn.Module):
+    def __init__(self):
+        super().__init__()
+        mbonet = mod_mobileone.mobileone(extra_chan=0)
+        self.stage0 = mbonet.stage0
+        self.stage1 = mbonet.stage1
+        self.stage2 = mbonet.stage2
+        self.stage3 = mbonet.stage3
+
+    def forward(self, f):
+        x   = self.stage0(f) 
+        f4  = self.stage1(x)   # 1/4, 48
+        f8  = self.stage2(f4)  # 1/8, 128
+        f16 = self.stage3(f8)  # 1/16, 256
+
+        return f16, f8, f4
+#! ##########################################
 
 class UpsampleBlock(nn.Module):
     def __init__(self, skip_c, up_c, out_c, scale_factor=2):

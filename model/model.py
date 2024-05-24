@@ -21,9 +21,10 @@ class STCNModel:
         self.para = para
         self.single_object = para['single_object']
         self.local_rank = local_rank
+        self.backbone = para['backbone']
 
         self.STCN = nn.parallel.DistributedDataParallel(
-            STCN(self.single_object).cuda(), 
+            STCN(self.single_object, self.backbone).cuda(), 
             device_ids=[local_rank], output_device=local_rank, broadcast_buffers=False)
 
         # Setup logger when local_rank=0
