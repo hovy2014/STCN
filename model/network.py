@@ -36,13 +36,13 @@ class Decoder(nn.Module):
         return x
 
 class Decoder_MBO(nn.Module):
-    def __init__(self):
+    def __init__(self, valuedim=512, headdim=256):
         super().__init__()
-        self.compress = ResBlock(1024, 256)
-        self.up_16_8 = UpsampleBlock(128, 256, 256) # 1/16 -> 1/8
-        self.up_8_4 = UpsampleBlock(48, 256, 256) # 1/8 -> 1/4
+        self.compress = ResBlock(valuedim*2, headdim)
+        self.up_16_8 = UpsampleBlock(128, headdim, headdim) # 1/16 -> 1/8
+        self.up_8_4 = UpsampleBlock(48, headdim, headdim) # 1/8 -> 1/4
 
-        self.pred = nn.Conv2d(256, 1, kernel_size=(3,3), padding=(1,1), stride=1)
+        self.pred = nn.Conv2d(headdim, 1, kernel_size=(3,3), padding=(1,1), stride=1)
 
     def forward(self, f16, f8, f4):
         x = self.compress(f16)
@@ -90,7 +90,7 @@ class MemoryReader(nn.Module):
 
 
 class STCN(nn.Module):
-    def __init__(self, single_object, backbone='res50res18'):
+    def __init__(self, single_object, backbone='res50res18', keydim=64, valuedim=512, headdim=256):
         super().__init__()
         self.single_object = single_object
         
@@ -108,18 +108,18 @@ class STCN(nn.Module):
 
             self.key_encoder = KeyEncoder_MBO()
             if single_object:
-                self.value_encoder = ValueEncoderSO_MBO()
+                self.value_encoder = ValueEncoderSO_MBO(valuedim=valuedim)
             else:
-                self.value_encoder = ValueEncoder_MBO()
-            self.decoder = Decoder_MBO()
+                self.value_encoder = ValueEncoder_MBO(valuedim=valuedim)
+            self.decoder = Decoder_MBO(valuedim=valuedim, headdim=headdim)
         else:
             raise NotImplementedError
 
         # Projection from f16 feature space to key space
-        self.key_proj = KeyProjection(f16_channels, keydim=64)
+        self.key_proj = KeyProjection(f16_channels, keydim=keydim)
 
         # Compress f16 a bit to use in decoding later on
-        self.key_comp = nn.Conv2d(f16_channels, 512, kernel_size=3, padding=1)
+        self.key_comp = nn.Conv2d(f16_channels, valuedim, kernel_size=3, padding=1)
 
         self.memory = MemoryReader()
 

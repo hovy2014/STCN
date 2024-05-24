@@ -150,7 +150,7 @@ class KeyEncoder(nn.Module):
 
 #! ###### mobileone key value encoder ########
 class ValueEncoderSO_MBO(nn.Module):
-    def __init__(self):
+    def __init__(self, valuedim=512):
         super().__init__()
 
         mbonet = mod_mobileone.mobileone(extra_chan=1)
@@ -159,7 +159,7 @@ class ValueEncoderSO_MBO(nn.Module):
         self.stage2 = mbonet.stage2
         self.stage3 = mbonet.stage3
 
-        self.fuser = FeatureFusionBlock(256 + 256, 512)
+        self.fuser = FeatureFusionBlock(256 + 256, valuedim)
 
     def forward(self, image, key_f16, mask):
         # key_f16 is the feature from the key encoder
@@ -176,7 +176,7 @@ class ValueEncoderSO_MBO(nn.Module):
         return x
 
 class ValueEncoder_MBO(nn.Module):
-    def __init__(self):
+    def __init__(self, valuedim=512):
         super().__init__()
 
         mbonet = mod_mobileone.mobileone(extra_chan=2)
@@ -185,7 +185,7 @@ class ValueEncoder_MBO(nn.Module):
         self.stage2 = mbonet.stage2
         self.stage3 = mbonet.stage3
 
-        self.fuser = FeatureFusionBlock(256 + 256, 512)
+        self.fuser = FeatureFusionBlock(256 + 256, valuedim)
 
     def forward(self, image, key_f16, mask, other_masks):
         # key_f16 is the feature from the key encoder

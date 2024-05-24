@@ -14,6 +14,9 @@ class HyperParameters():
         
         parser.add_argument('--tps_torch', action='store_true')
         parser.add_argument('--backbone', help='res50res18|s0s0', default='res50res18')
+        parser.add_argument('--keydim', type=int, default=64)
+        parser.add_argument('--valuedim', type=int, default=512)
+        parser.add_argument('--headdim', type=int, default=256)
 
         # Data parameters
         parser.add_argument('--static_root', help='Static training data root', default='../static')
