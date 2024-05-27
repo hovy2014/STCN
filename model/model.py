@@ -25,9 +25,10 @@ class STCNModel:
         self.keydim = para['keydim']
         self.valuedim = para['valuedim']
         self.headdim = para['headdim']
+        self.no_aff_amp = para['no_aff_amp']
 
         self.STCN = nn.parallel.DistributedDataParallel(
-            STCN(self.single_object, self.backbone, self.keydim, self.valuedim, self.headdim).cuda(), 
+            STCN(self.single_object, self.backbone, self.keydim, self.valuedim, self.headdim, self.no_aff_amp).cuda(), 
             device_ids=[local_rank], output_device=local_rank, broadcast_buffers=False)
 
         # Setup logger when local_rank=0
@@ -224,6 +225,18 @@ class STCNModel:
             if k == 'value_encoder.conv1.weight':
                 if src_dict[k].shape[1] == 4:
                     pads = torch.zeros((64,1,7,7), device=src_dict[k].device)
+                    nn.init.orthogonal_(pads)
+                    src_dict[k] = torch.cat([src_dict[k], pads], 1)
+            
+            if k == 'value_encoder.stage0.rbr_conv.0.conv.weight':
+                if src_dict[k].shape[1] == 4:
+                    pads = torch.zeros((48,1,3,3), device=src_dict[k].device)
+                    nn.init.orthogonal_(pads)
+                    src_dict[k] = torch.cat([src_dict[k], pads], 1)
+            
+            if k == 'value_encoder.stage0.rbr_scale.conv.weight':
+                if src_dict[k].shape[1] == 4:
+                    pads = torch.zeros((48,1,1,1), device=src_dict[k].device)
                     nn.init.orthogonal_(pads)
                     src_dict[k] = torch.cat([src_dict[k], pads], 1)
 

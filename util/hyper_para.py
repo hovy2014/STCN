@@ -17,6 +17,7 @@ class HyperParameters():
         parser.add_argument('--keydim', type=int, default=64)
         parser.add_argument('--valuedim', type=int, default=512)
         parser.add_argument('--headdim', type=int, default=256)
+        parser.add_argument('--no_aff_amp', action='store_true')
 
         # Data parameters
         parser.add_argument('--static_root', help='Static training data root', default='../static')

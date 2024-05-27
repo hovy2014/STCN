@@ -55,27 +55,32 @@ class Decoder_MBO(nn.Module):
         return x
 
 class MemoryReader(nn.Module):
-    def __init__(self):
+    def __init__(self, no_aff_amp=True):
         super().__init__()
+        self.no_aff_amp = no_aff_amp
  
     def get_affinity(self, mk, qk):
-        B, CK, T, H, W = mk.shape
-        mk = mk.flatten(start_dim=2)
-        qk = qk.flatten(start_dim=2)
+        with torch.cuda.amp.autocast(enabled=not self.no_aff_amp):
+            if self.no_aff_amp:
+                mk = mk.float()
+                qk = qk.float()
+            B, CK, T, H, W = mk.shape
+            mk = mk.flatten(start_dim=2)
+            qk = qk.flatten(start_dim=2)
 
-        # See supplementary material
-        a_sq = mk.pow(2).sum(1).unsqueeze(2)
-        ab = mk.transpose(1, 2) @ qk
+            # See supplementary material
+            a_sq = mk.pow(2).sum(1).unsqueeze(2)
+            ab = mk.transpose(1, 2) @ qk
 
-        affinity = (2*ab-a_sq) / math.sqrt(CK)   # B, THW, HW
+            affinity = (2*ab-a_sq) / math.sqrt(CK)   # B, THW, HW
+            
+            # softmax operation; aligned the evaluation style
+            maxes = torch.max(affinity, dim=1, keepdim=True)[0]
+            x_exp = torch.exp(affinity - maxes)
+            x_exp_sum = torch.sum(x_exp, dim=1, keepdim=True)
+            affinity = x_exp / x_exp_sum 
         
-        # softmax operation; aligned the evaluation style
-        maxes = torch.max(affinity, dim=1, keepdim=True)[0]
-        x_exp = torch.exp(affinity - maxes)
-        x_exp_sum = torch.sum(x_exp, dim=1, keepdim=True)
-        affinity = x_exp / x_exp_sum 
-
-        return affinity
+        return affinity if not self.no_aff_amp else affinity.half()
 
     def readout(self, affinity, mv, qv):
         B, CV, T, H, W = mv.shape
@@ -90,7 +95,7 @@ class MemoryReader(nn.Module):
 
 
 class STCN(nn.Module):
-    def __init__(self, single_object, backbone='res50res18', keydim=64, valuedim=512, headdim=256):
+    def __init__(self, single_object, backbone='res50res18', keydim=64, valuedim=512, headdim=256, no_aff_amp=True):
         super().__init__()
         self.single_object = single_object
         
@@ -121,7 +126,7 @@ class STCN(nn.Module):
         # Compress f16 a bit to use in decoding later on
         self.key_comp = nn.Conv2d(f16_channels, valuedim, kernel_size=3, padding=1)
 
-        self.memory = MemoryReader()
+        self.memory = MemoryReader(no_aff_amp)
 
     def aggregate(self, prob):
         new_prob = torch.cat([
