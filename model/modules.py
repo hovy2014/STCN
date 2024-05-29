@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 
-from model import mod_resnet, mod_mobileone
+from model import mod_resnet, mod_mobileone, mod_mobilenetv2
 from model import cbam
 
 
@@ -218,6 +218,72 @@ class KeyEncoder_MBO(nn.Module):
 
         return f16, f8, f4
 #! ##########################################
+
+#! ###### mobilenetv2 key value encoder ########
+class ValueEncoderSO_MB2(nn.Module):
+    def __init__(self, valuedim=512):
+        super().__init__()
+
+        mbonet = mod_mobilenetv2.mobilenetv2(extra_chan=1)
+        self.stage0 = mbonet.stage0
+        self.stage1 = mbonet.stage1
+        self.stage2 = mbonet.stage2
+
+        self.fuser = FeatureFusionBlock(96 + 96, valuedim)
+
+    def forward(self, image, key_f16, mask):
+        # key_f16 is the feature from the key encoder
+
+        f = torch.cat([image, mask], 1)
+
+        x = self.stage0(f)  # 1/4, 24
+        x = self.stage1(x)  # 1/8, 32
+        x = self.stage2(x)  # 1/16, 96
+
+        x = self.fuser(x, key_f16)
+
+        return x
+
+class ValueEncoder_MB2(nn.Module):
+    def __init__(self, valuedim=512):
+        super().__init__()
+
+        mbonet = mod_mobilenetv2.mobilenetv2(extra_chan=2)
+        self.stage0 = mbonet.stage0
+        self.stage1 = mbonet.stage1
+        self.stage2 = mbonet.stage2
+
+        self.fuser = FeatureFusionBlock(96 + 96, valuedim)
+
+    def forward(self, image, key_f16, mask, other_masks):
+        # key_f16 is the feature from the key encoder
+
+        f = torch.cat([image, mask, other_masks], 1)
+
+        x = self.stage0(f)  # 1/4, 24
+        x = self.stage1(x)  # 1/8, 32
+        x = self.stage2(x)  # 1/16, 96
+
+        x = self.fuser(x, key_f16)
+
+        return x
+ 
+class KeyEncoder_MB2(nn.Module):
+    def __init__(self):
+        super().__init__()
+        mbonet = mod_mobilenetv2.mobilenetv2(extra_chan=0)
+        self.stage0 = mbonet.stage0
+        self.stage1 = mbonet.stage1
+        self.stage2 = mbonet.stage2
+
+    def forward(self, f):
+        f4   = self.stage0(f) 
+        f8  = self.stage1(f4)   # 1/4, 48
+        f16  = self.stage2(f8)  # 1/8, 128
+
+        return f16, f8, f4
+#! ##########################################
+
 
 class UpsampleBlock(nn.Module):
     def __init__(self, skip_c, up_c, out_c, scale_factor=2):

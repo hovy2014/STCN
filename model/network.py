@@ -54,6 +54,25 @@ class Decoder_MBO(nn.Module):
         x = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
         return x
 
+class Decoder_MB2(nn.Module):
+    def __init__(self, valuedim=512, headdim=256):
+        super().__init__()
+        self.compress = ResBlock(valuedim*2, headdim)
+        self.up_16_8 = UpsampleBlock(32, headdim, headdim) # 1/16 -> 1/8
+        self.up_8_4 = UpsampleBlock(24, headdim, headdim) # 1/8 -> 1/4
+
+        self.pred = nn.Conv2d(headdim, 1, kernel_size=(3,3), padding=(1,1), stride=1)
+
+    def forward(self, f16, f8, f4):
+        x = self.compress(f16)
+        x = self.up_16_8(f8, x)
+        x = self.up_8_4(f4, x)
+
+        x = self.pred(F.relu(x))
+        
+        x = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
+        return x
+
 class MemoryReader(nn.Module):
     def __init__(self, no_aff_amp=True):
         super().__init__()
@@ -117,6 +136,15 @@ class STCN(nn.Module):
             else:
                 self.value_encoder = ValueEncoder_MBO(valuedim=valuedim)
             self.decoder = Decoder_MBO(valuedim=valuedim, headdim=headdim)
+        elif backbone == 'v2v2':
+            f16_channels = 96
+
+            self.key_encoder = KeyEncoder_MB2()
+            if single_object:
+                self.value_encoder = ValueEncoderSO_MB2(valuedim=valuedim)
+            else:
+                self.value_encoder = ValueEncoder_MB2(valuedim=valuedim)
+            self.decoder = Decoder_MB2(valuedim=valuedim, headdim=headdim)
         else:
             raise NotImplementedError
 

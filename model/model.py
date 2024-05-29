@@ -239,6 +239,12 @@ class STCNModel:
                     pads = torch.zeros((48,1,1,1), device=src_dict[k].device)
                     nn.init.orthogonal_(pads)
                     src_dict[k] = torch.cat([src_dict[k], pads], 1)
+            
+            if k == 'value_encoder.stage0.0.0.weight':
+                if src_dict[k].shape[1] == 4:
+                    pads = torch.zeros((32,1,3,3), device=src_dict[k].device)
+                    nn.init.orthogonal_(pads)
+                    src_dict[k] = torch.cat([src_dict[k], pads], 1)
 
         self.STCN.module.load_state_dict(src_dict)
         print('Network weight loaded:', path)
