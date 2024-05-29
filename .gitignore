@@ -1,6 +1,8 @@
 log/
 saves/
 .vscode/
+res/
+pretrained_model/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
