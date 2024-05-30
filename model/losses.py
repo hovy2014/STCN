@@ -50,7 +50,7 @@ class LossComputer:
     def __init__(self, para):
         super().__init__()
         self.para = para
-        self.bce = BootstrappedCE()
+        self.bce = BootstrappedCE(start_warm=para['start_warm'], end_warm=para['end_warm'])
 
     def compute(self, data, it):
         losses = defaultdict(int)

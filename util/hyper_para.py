@@ -19,6 +19,9 @@ class HyperParameters():
         parser.add_argument('--headdim', type=int, default=256)
         parser.add_argument('--no_aff_amp', action='store_true')
 
+        parser.add_argument('--start_warm', type=int, default=20000)
+        parser.add_argument('--end_warm', type=int, default=70000)
+
         # Data parameters
         parser.add_argument('--static_root', help='Static training data root', default='../static')
         parser.add_argument('--bl_root', help='Blender training data root', default='../BL30K')
