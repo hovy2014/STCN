@@ -111,6 +111,24 @@ def renew_bl_loader(max_skip):
 
     return construct_loader(train_dataset)
 
+def renew_mose_loader(max_skip):
+    yv_dataset = VOSDataset(path.join(yv_root, 'JPEGImages'), 
+                        path.join(yv_root, 'Annotations'), max_skip//5, is_bl=False, subset=load_sub_yv())
+    davis_dataset = VOSDataset(path.join(davis_root, 'JPEGImages', '480p'), 
+                        path.join(davis_root, 'Annotations', '480p'), max_skip, is_bl=False, subset=load_sub_davis())
+    mose_dataset = VOSDataset(path.join(mose_root, 'JPEGImages'), 
+                        path.join(mose_root, 'Annotations'), max_skip, is_bl=False)
+    train_dataset = ConcatDataset([davis_dataset]*5 + [yv_dataset] + [mose_dataset])
+
+    print('YouTube dataset size: ', len(yv_dataset))
+    print('DAVIS dataset size: ', len(davis_dataset))
+    print('MOSE dataset size: ', len(mose_dataset))
+    print('Concat dataset size: ', len(train_dataset))
+    print('Renewed with skip: ', max_skip)
+
+    return construct_loader(train_dataset)
+
+
 """
 Dataset related
 """
@@ -145,7 +163,7 @@ elif para['stage'] == 1:
 
     train_sampler, train_loader = renew_bl_loader(5)
     renew_loader = renew_bl_loader
-else:
+elif para['stage'] == 2 or para['stage'] == 3:
     # stage 2 or 3
     increase_skip_fraction = [0.1, 0.2, 0.3, 0.4, 0.9, 1.0]
     # VOS dataset, 480p is used for both datasets
@@ -154,7 +172,15 @@ else:
 
     train_sampler, train_loader = renew_vos_loader(5)
     renew_loader = renew_vos_loader
+elif para['stage'] == 4:
+    increase_skip_fraction = [0.1, 0.2, 0.3, 0.4, 0.9, 1.0]
+    # VOS dataset, 480p is used for both datasets
+    yv_root = path.join(path.expanduser(para['yv_root']), 'train_480p')
+    davis_root = path.join(path.expanduser(para['davis_root']), '2017', 'trainval')
+    mose_root = path.join(path.expanduser(para['mose_root']), 'train')
 
+    train_sampler, train_loader = renew_mose_loader(5)
+    renew_loader = renew_vos_loader
 
 """
 Determine current/max epoch
@@ -187,7 +213,7 @@ try:
         train_sampler.set_epoch(e)
 
         # Train loop
-        model.train()
+        model.train(para['no_bn_freeze'])
         for data in train_loader:
             model.do_pass(data, total_iter)
             total_iter += 1

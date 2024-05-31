@@ -249,12 +249,15 @@ class STCNModel:
         self.STCN.module.load_state_dict(src_dict)
         print('Network weight loaded:', path)
 
-    def train(self):
+    def train(self, no_bn_freeze=False):
         self._is_train = True
         self._do_log = True
         self.integrator = self.train_integrator
         # Shall be in eval() mode to freeze BN parameters
-        self.STCN.eval()
+        if no_bn_freeze:
+            self.STCN.train()
+        else:
+            self.STCN.eval()
         return self
 
     def val(self):

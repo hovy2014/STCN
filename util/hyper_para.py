@@ -18,6 +18,7 @@ class HyperParameters():
         parser.add_argument('--valuedim', type=int, default=512)
         parser.add_argument('--headdim', type=int, default=256)
         parser.add_argument('--no_aff_amp', action='store_true')
+        parser.add_argument('--no_bn_freeze', action='store_true')
 
         parser.add_argument('--start_warm', type=int, default=20000)
         parser.add_argument('--end_warm', type=int, default=70000)
@@ -27,6 +28,7 @@ class HyperParameters():
         parser.add_argument('--bl_root', help='Blender training data root', default='../BL30K')
         parser.add_argument('--yv_root', help='YouTubeVOS data root', default='../YouTube')
         parser.add_argument('--davis_root', help='DAVIS data root', default='../DAVIS')
+        parser.add_argument('--mose_root', help='MOSE data root', default='../MOSE')
 
         parser.add_argument('--stage', help='Training stage (0-static images, 1-Blender dataset, 2-DAVIS+YouTubeVOS (300K), 3-DAVIS+YouTubeVOS (150K))', type=int, default=0)
         parser.add_argument('--num_workers', help='Number of datalaoder workers per process', type=int, default=8)
@@ -82,6 +84,13 @@ class HyperParameters():
             self.args['steps'] = none_or_default(self.args['steps'], [250000])
             self.args['single_object'] = False
         elif self.args['stage'] == 3:
+            # 150K main training for after static image pretraining
+            self.args['lr'] = none_or_default(self.args['lr'], 1e-5)
+            self.args['batch_size'] = none_or_default(self.args['batch_size'], 4)
+            self.args['iterations'] = none_or_default(self.args['iterations'], 150000)
+            self.args['steps'] = none_or_default(self.args['steps'], [125000])
+            self.args['single_object'] = False
+        elif self.args['stage'] == 4:
             # 150K main training for after static image pretraining
             self.args['lr'] = none_or_default(self.args['lr'], 1e-5)
             self.args['batch_size'] = none_or_default(self.args['batch_size'], 4)
