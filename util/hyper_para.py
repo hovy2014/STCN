@@ -19,6 +19,7 @@ class HyperParameters():
         parser.add_argument('--headdim', type=int, default=256)
         parser.add_argument('--no_aff_amp', action='store_true')
         parser.add_argument('--no_bn_freeze', action='store_true')
+        parser.add_argument('--no_softmax_stable', action='store_true')
 
         parser.add_argument('--start_warm', type=int, default=20000)
         parser.add_argument('--end_warm', type=int, default=70000)

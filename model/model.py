@@ -26,9 +26,10 @@ class STCNModel:
         self.valuedim = para['valuedim']
         self.headdim = para['headdim']
         self.no_aff_amp = para['no_aff_amp']
+        self.no_softmax_stable = para['no_softmax_stable']
 
         self.STCN = nn.parallel.DistributedDataParallel(
-            STCN(self.single_object, self.backbone, self.keydim, self.valuedim, self.headdim, self.no_aff_amp).cuda(), 
+            STCN(self.single_object, self.backbone, self.keydim, self.valuedim, self.headdim, self.no_aff_amp, self.no_softmax_stable).cuda(), 
             device_ids=[local_rank], output_device=local_rank, broadcast_buffers=False)
 
         # Setup logger when local_rank=0
